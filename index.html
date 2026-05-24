@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CRATE DIGGER</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500&family=Oswald:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg: #6e4a2a;            /* 濃いオークウッド（やや甘い暖色） */
+  --bg-deep: #523620;       /* より深い木目 */
+  --surface: #815a37;       /* カード面（やや明るい木） */
+  --surface-2: #916845;     /* 入力面 */
+  --ink: #f7efe2;           /* 文字（生成り白） */
+  --muted: #d2b692;         /* 補助テキスト */
+  --border: #5c3e23;        /* 境界線 */
+  --accent: #fff4d4;        /* クリーム（白を混ぜた温かみ） */
+  --accent-soft: #fbe9bf;   /* やや濃いクリーム */
+  --done-bg: #5a3f25;
+  --done-accent: #7d9a5f;   /* くすんだ緑 */
+  --red: #c75541;           /* くすんだ赤 */
+  --fab: #fff4d4;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg-deep);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 300;
+}
+
+.app {
+  max-width: 430px;
+  margin: 0 auto;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 18%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.045) 0px, rgba(0,0,0,.045) 2px, transparent 2px, transparent 7px),
+    var(--bg);
+  position: relative;
+  overflow: hidden;
+}
+
+.page {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeUp .22s ease;
+}
+.page.active { display: flex; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── NAVBAR ── */
+.navbar {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 8px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.05);
+}
+
+.navbar .back {
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--muted);
+  line-height: 1;
+  padding: 6px 6px 6px 0;
+}
+.navbar .back:active { color: var(--accent); }
+
+.navbar h1 {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  flex: 1;
+}
+
+.navbar .nav-action {
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  padding: 6px 0 6px 12px;
+  white-space: nowrap;
+}
+.navbar .nav-action:active { color: var(--accent); }
+.navbar .nav-action.red { color: var(--red); }
+
+/* ── TOP PAGE ── */
+#page-top {
+  justify-content: center;
+  align-items: center;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255,244,212,.12) 0%, rgba(255,244,212,0) 55%),
+    var(--bg-deep);
+}
+
+.top-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  margin-bottom: 6px;
+  text-align: center;
+  color: var(--accent-soft);
+  text-indent: 0.22em;
+}
+
+.top-sub {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--muted);
+  margin-bottom: 48px;
+  text-transform: uppercase;
+  text-indent: 0.3em;
+}
+
+.top-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 200px;
+}
+
+.top-btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink);
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  text-align: center;
+  transition: all .15s;
+}
+.top-btn:active { background: var(--accent); color: var(--bg-deep); border-color: var(--accent); }
+.top-btn.primary { background: var(--accent); color: var(--bg-deep); border-color: var(--accent); font-weight: 500; }
+.top-btn.primary:active { opacity: .85; }
+
+/* ── ADD PAGE ── */
+#page-add .scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.field { margin-bottom: 20px; }
+
+.field label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 7px;
+  font-weight: 400;
+}
+
+.field input, .field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 15px;
+  font-weight: 300;
+  background: var(--surface-2);
+  color: var(--ink);
+  outline: none;
+  transition: border-color .15s;
+  -webkit-appearance: none;
+}
+.field input::placeholder, .field textarea::placeholder { color: var(--muted); opacity: .7; }
+.field input:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+
+.add-footer {
+  padding: 16px 20px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  background: var(--bg-deep);
+  border-top: 1px solid var(--border);
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 14px;
+  background: var(--accent);
+  color: var(--bg-deep);
+  border: none;
+  border-radius: 6px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: opacity .15s;
+}
+.btn-submit:active { opacity: .85; }
+
+/* ── LIST PAGE ── */
+#page-list .scroll-area, #page-done .scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 88px;
+}
+
+/* Select mode bar */
+.select-bar {
+  display: none;
+  align-items: center;
+  padding: 8px 20px;
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  flex-shrink: 0;
+}
+.select-bar.show { display: flex; }
+
+.select-bar span {
+  flex: 1;
+  font-size: 12px;
+  color: var(--accent-soft);
+}
+
+.btn-select-del {
+  padding: 6px 14px;
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-select-del:disabled { opacity: .4; cursor: default; }
+
+.btn-select-cancel {
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* Book item */
+.book-item {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: background .1s;
+  gap: 14px;
+}
+.book-item:active { background: var(--surface-2); }
+.book-item.selected { background: var(--surface-2); }
+
+.book-item-check {
+  display: none;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--bg-deep);
+  transition: all .15s;
+}
+.select-mode .book-item-check { display: flex; }
+.book-item.selected .book-item-check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.book-item-body { flex: 1; min-width: 0; }
+
+.book-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.book-item-author {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.book-item-price {
+  font-size: 12px;
+  color: var(--accent-soft);
+  flex-shrink: 0;
+}
+
+.book-item-arrow {
+  font-size: 16px;
+  color: var(--border);
+  flex-shrink: 0;
+}
+.select-mode .book-item-arrow { display: none; }
+
+.empty-state {
+  padding: 64px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 2;
+}
+.empty-icon { font-size: 36px; display: block; margin-bottom: 12px; opacity: .35; }
+
+/* ── FAB ── */
+.fab {
+  position: absolute;
+  bottom: calc(28px + env(safe-area-inset-bottom));
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  background: var(--fab);
+  color: var(--bg-deep);
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  transition: transform .15s;
+  z-index: 10;
+}
+.fab:active { transform: scale(.93); }
+
+/* ── MODAL OVERLAY (center) ── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: overlayIn .18s ease;
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.overlay.show { display: flex; }
+
+.modal-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  animation: modalIn .2s ease;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.modal-header {
+  padding: 20px 20px 0;
+  flex-shrink: 0;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 3px;
+}
+.modal-author {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.modal-price {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.modal-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* View mode */
+.memo-label {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.memo-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+  min-height: 40px;
+}
+.memo-text.empty { color: var(--muted); font-style: italic; }
+
+
+
+.modal-footer {
+  padding: 12px 20px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.btn-modal-done {
+  flex: 1;
+  padding: 12px;
+  background: var(--done-accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: opacity .15s;
+}
+.btn-modal-done:active { opacity: .7; }
+
+.btn-modal-delete {
+  padding: 12px 14px;
+  background: transparent;
+  color: var(--red);
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-modal-delete:active { background: rgba(199,85,65,.16); }
+
+.btn-modal-close {
+  padding: 12px 14px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn-modal-close:active { background: var(--surface-2); }
+
+/* ── DONE PAGE ── */
+#page-done .book-item { background: var(--done-bg); cursor: default; }
+#page-done .book-item:active { background: var(--done-bg); }
+
+.done-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: var(--done-accent);
+  color: #fff;
+  border-radius: 10px;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+/* Sort toggle */
+.sort-bar {
+  display: flex;
+  padding: 10px 20px;
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 0;
+}
+.sort-btn {
+  padding: 5px 14px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  letter-spacing: 0.03em;
+  transition: all .15s;
+}
+.sort-btn:first-child { border-radius: 4px 0 0 4px; }
+.sort-btn:last-child  { border-radius: 0 4px 4px 0; border-left: none; }
+.sort-btn.active { background: var(--accent); color: var(--bg-deep); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══ TOP ══ -->
+  <div class="page active" id="page-top">
+    <div class="top-title">CRATE DIGGER</div>
+    <div class="top-sub">RECORD MEMO</div>
+    <div class="top-menu">
+      <button class="top-btn primary" onclick="go('list','top')">ほしいリスト</button>
+      <button class="top-btn" onclick="go('add','top')">追加</button>
+      <button class="top-btn" onclick="go('done','top')">入手済み</button>
+    </div>
+  </div>
+
+  <!-- ══ ADD ══ -->
+  <div class="page" id="page-add">
+    <div class="navbar">
+      <span class="back" onclick="goBack()">‹</span>
+      <h1>追加</h1>
+    </div>
+    <div class="scroll-area">
+      <div class="field"><label>タイトル</label><input type="text" id="f-title" placeholder="アルバム / 曲名"></div>
+      <div class="field"><label>アーティスト</label><input type="text" id="f-author" placeholder="アーティスト名"></div>
+      <div class="field"><label>レーベル / 品番</label><input type="text" id="f-label" placeholder="例：Blue Note / BLP 1577"></div>
+      <div class="field"><label>価格（円）</label><input type="number" id="f-price" placeholder="3500"></div>
+      <div class="field"><label>メモ</label><textarea id="f-memo" placeholder="気になった理由、盤質、どこで見たか…"></textarea></div>
+    </div>
+    <div class="add-footer">
+      <button class="btn-submit" onclick="addRecord()">追加する</button>
+    </div>
+  </div>
+
+  <!-- ══ LIST ══ -->
+  <div class="page" id="page-list">
+    <div class="navbar" id="list-navbar">
+      <span class="back" onclick="goBack()">‹</span>
+      <h1>ほしいリスト</h1>
+      <span class="nav-action" onclick="go('done','list')">入手済み</span>
+      <span class="nav-action" onclick="enterSelectMode()">選択</span>
+    </div>
+
+    <!-- Select mode bar -->
+    <div class="select-bar" id="select-bar">
+      <span id="select-count-label">0件を選択中</span>
+      <button class="btn-select-cancel" onclick="exitSelectMode()">キャンセル</button>
+      <button class="btn-select-del" id="btn-bulk-del" onclick="bulkDelete()" disabled>削除</button>
+    </div>
+
+    <div class="sort-bar">
+      <button class="sort-btn active" onclick="setSort('new',this)">新しい順</button>
+      <button class="sort-btn" onclick="setSort('az',this)">タイトル順</button>
+    </div>
+    <div class="scroll-area">
+      <div id="book-list"></div>
+    </div>
+    <button class="fab" id="list-fab" onclick="go('add','list')">＋</button>
+  </div>
+
+  <!-- ══ DONE ══ -->
+  <div class="page" id="page-done">
+    <div class="navbar">
+      <span class="back" onclick="goBack()">‹</span>
+      <h1>入手済み</h1>
+    </div>
+    <div class="scroll-area">
+      <div id="done-list"></div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL (center) ══ -->
+  <div class="overlay" id="overlay" onclick="overlayClick(event)">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title" id="ov-title"></div>
+        <div class="modal-author" id="ov-author"></div>
+        <div class="modal-author" id="ov-label"></div>
+        <div class="modal-price" id="ov-price"></div>
+      </div>
+      <div class="modal-divider"></div>
+      <div class="modal-body">
+        <div class="memo-label">メモ</div>
+        <div class="memo-text" id="ov-memo"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-done" onclick="markDone()">✓ 入手した</button>
+        <button class="btn-modal-delete" onclick="deleteFromModal()">削除</button>
+        <button class="btn-modal-close" onclick="closeOverlay()">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let records = [];
+  let sortMode = 'new';
+  let activeId = null;
+  let pageHistory = [];
+  let selectMode = false;
+  let selectedIds = new Set();
+
+  // ── Storage ──
+  function load() {
+    try { records = JSON.parse(localStorage.getItem('cratedigger_v1') || '[]'); } catch { records = []; }
+  }
+  function save() { localStorage.setItem('cratedigger_v1', JSON.stringify(records)); }
+  function uid()  { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+  // ── Navigation ──
+  function go(page, from) {
+    if (from) pageHistory.push(from);
+    showPage(page);
+  }
+
+  function goBack() {
+    const prev = pageHistory.pop() || 'top';
+    showPage(prev);
+  }
+
+  function showPage(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    if (page === 'list') { exitSelectMode(); renderList(); }
+    if (page === 'done') renderDone();
+    const sa = document.getElementById('page-' + page)?.querySelector('.scroll-area');
+    if (sa) sa.scrollTop = 0;
+  }
+
+  // ── Add ──
+  function addRecord() {
+    const title = document.getElementById('f-title').value.trim();
+    if (!title) { document.getElementById('f-title').focus(); return; }
+    records.unshift({
+      id: uid(),
+      title,
+      author: document.getElementById('f-author').value.trim(),
+      label:  document.getElementById('f-label').value.trim(),
+      price:  document.getElementById('f-price').value.trim(),
+      memo:   document.getElementById('f-memo').value.trim(),
+      done: false,
+      addedAt: Date.now(),
+    });
+    save();
+    ['f-title','f-author','f-label','f-price','f-memo'].forEach(id => document.getElementById(id).value = '');
+    pageHistory = [];
+    go('list');
+  }
+
+  // ── Sort ──
+  function setSort(mode, el) {
+    sortMode = mode;
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    renderList();
+  }
+
+  // ── Select Mode ──
+  function enterSelectMode() {
+    selectMode = true;
+    selectedIds.clear();
+    document.getElementById('select-bar').classList.add('show');
+    document.getElementById('list-fab').style.display = 'none';
+    document.getElementById('book-list').classList.add('select-mode');
+    updateSelectBar();
+    renderList();
+  }
+
+  function exitSelectMode() {
+    selectMode = false;
+    selectedIds.clear();
+    document.getElementById('select-bar').classList.remove('show');
+    document.getElementById('list-fab').style.display = '';
+    document.getElementById('book-list').classList.remove('select-mode');
+    renderList();
+  }
+
+  function toggleSelect(id) {
+    if (selectedIds.has(id)) selectedIds.delete(id);
+    else selectedIds.add(id);
+    updateSelectBar();
+    // update item UI
+    document.querySelectorAll('.book-item').forEach(el => {
+      if (el.dataset.id === id) {
+        el.classList.toggle('selected', selectedIds.has(id));
+        const check = el.querySelector('.book-item-check');
+        if (check) check.textContent = selectedIds.has(id) ? '✓' : '';
+      }
+    });
+  }
+
+  function updateSelectBar() {
+    const n = selectedIds.size;
+    document.getElementById('select-count-label').textContent = `${n}件を選択中`;
+    document.getElementById('btn-bulk-del').disabled = n === 0;
+  }
+
+  function bulkDelete() {
+    if (!selectedIds.size) return;
+    records = records.filter(b => !selectedIds.has(b.id));
+    save();
+    exitSelectMode();
+  }
+
+  // ── Render List ──
+  function renderList() {
+    let items = records.filter(b => !b.done);
+    if (sortMode === 'az') items = [...items].sort((a,b) => a.title.localeCompare(b.title,'ja'));
+
+    const wrap = document.getElementById('book-list');
+    if (selectMode) wrap.classList.add('select-mode');
+
+    if (!items.length) {
+      wrap.innerHTML = `<div class="empty-state">レコードがありません<br>「＋」から追加してみましょう</div>`;
+      return;
+    }
+
+    wrap.innerHTML = items.map(b => {
+      const sel = selectedIds.has(b.id);
+      return `
+        <div class="book-item ${sel ? 'selected' : ''}" data-id="${b.id}"
+          onclick="${selectMode ? `toggleSelect('${b.id}')` : `openOverlay('${b.id}')`}">
+          <div class="book-item-check">${sel ? '✓' : ''}</div>
+          <div class="book-item-body">
+            <div class="book-item-title">${esc(b.title)}</div>
+            <div class="book-item-author">${b.author ? esc(b.author) : 'アーティスト不明'}</div>
+          </div>
+          ${b.price ? `<div class="book-item-price">¥${Number(b.price).toLocaleString()}</div>` : ''}
+          <div class="book-item-arrow">›</div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Render Done ──
+  function renderDone() {
+    const items = records.filter(b => b.done);
+    const el = document.getElementById('done-list');
+    if (!items.length) {
+      el.innerHTML = `<div class="empty-state"><span class="empty-icon">✓</span>入手済みのレコードはありません</div>`;
+      return;
+    }
+    el.innerHTML = items.map(b => `
+      <div class="book-item">
+        <div class="book-item-body">
+          <div class="book-item-title">${esc(b.title)}</div>
+          <div class="book-item-author">${b.author ? esc(b.author) : 'アーティスト不明'}</div>
+        </div>
+        <div class="done-badge">入手済み</div>
+      </div>
+    `).join('');
+  }
+
+  // ── Modal ──
+  function openOverlay(id) {
+    const b = records.find(b => b.id === id);
+    if (!b) return;
+    activeId = id;
+    document.getElementById('ov-title').textContent  = b.title;
+    document.getElementById('ov-author').textContent = b.author || '';
+    document.getElementById('ov-label').textContent  = b.label || '';
+    document.getElementById('ov-price').textContent  = b.price ? `¥${Number(b.price).toLocaleString()}` : '';
+    const memoEl = document.getElementById('ov-memo');
+    if (b.memo) {
+      memoEl.textContent = b.memo;
+      memoEl.classList.remove('empty');
+    } else {
+      memoEl.textContent = 'メモなし';
+      memoEl.classList.add('empty');
+    }
+    document.getElementById('overlay').classList.add('show');
+  }
+
+  function closeOverlay() {
+    document.getElementById('overlay').classList.remove('show');
+    activeId = null;
+  }
+
+  function overlayClick(e) {
+    if (e.target === document.getElementById('overlay')) closeOverlay();
+  }
+
+
+  // ── Actions ──
+  function markDone() {
+    const b = records.find(b => b.id === activeId);
+    if (!b) return;
+    b.done = true;
+    save();
+    closeOverlay();
+    renderList();
+  }
+
+  function deleteFromModal() {
+    records = records.filter(b => b.id !== activeId);
+    save();
+    closeOverlay();
+    renderList();
+  }
+
+  function esc(s) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  load();
+</script>
+</body>
+</html>
